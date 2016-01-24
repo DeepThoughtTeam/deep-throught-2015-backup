@@ -1,0 +1,26 @@
+# TRAIN
+python json_parser/JSONDecoder.py -c train -i json_parser/mlp_solver.json -o json_parser/mlp_solver.prototxt -t 5000
+./build/tools/caffe train --solver=json_parser/mlp_solver.prototxt
+
+# TEST
+python json_parser/JSONDecoder.py -c test -i json_parser/mlp_train_test.json -o json_parser/mlp_train_test.prototxt
+./build/tools/caffe test -model json_parser/mlp_train_test.prototxt -weights json_parser/mlp_models/mlp_iter_5000.caffemodel
+
+# prepare
+sh run_test.sh prepare json_parser/mlp_train_test.json json_parser/mlp_train_test.prototxt
+
+# train 
+sh run_test.sh train json_parser/mlp_solver.json json_parser/mlp_solver.prototxt 5000
+
+# test
+sh run_test.sh test json_parser/mlp_train_test.json json_parser/mlp_train_test.prototxt json_parser/mlp_models/mlp_iter_5000.caffemodel
+
+python run2out.py -m prepare -j json_parser/mlp_train_test.json
+python run2out.py -m train -j json_parser/mlp_solver.json -r 5000
+python run2out.py -m test -j json_parser/mlp_train_test.json -r json_parser/mlp_models/mlp_iter_5000.caffemodel
+
+# from web server
+python ~/caffe/run2out.py -m prepare -j ~/caffe/json_parser/mlp_train_test.json
+
+http://127.0.0.1:8000/webui/show-test-result/
+http://127.0.0.1:8000/webui/show-train-result/

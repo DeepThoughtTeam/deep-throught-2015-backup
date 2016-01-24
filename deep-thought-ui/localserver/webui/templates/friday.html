@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<canvas id="myCanvas" width="1420" height="1000" style="border:1px solid #000000;">
+Your browser does not support the HTML5 canvas tag.
+</canvas>
+
+<script src="/static/js/jquery-1.11.3.js" type="text/javascript"></script>
+
+<script>
+
+    // Latest by Wei.
+var data1 = {
+    "name": "mnist_siamese",
+    "input": "data",
+    "input_shape": {
+        "dim": [
+            10000,
+            1,
+            28,
+            28
+        ]
+    },
+    "layer": [
+        {
+            "name": "ip1",
+            "type": "InnerProduct",
+            "bottom": "data",
+            "top": "ip1",
+            "param": [
+                {
+                    "lr_mult": 1
+                },
+                {
+                    "lr_mult": 2
+                }
+            ],
+            "inner_product_param": {
+                "num_output": 20,
+                "weight_filler": {
+                    "type": "xavier"
+                },
+                "bias_filler": {
+                    "type": "constant"
+                }
+            }
+        },
+        {
+            "name": "relu1",
+            "type": "ReLU",
+            "bottom": "ip1",
+            "top": "ip1"
+        },
+        {
+            "name": "ip2",
+            "type": "InnerProduct",
+            "bottom": "ip1",
+            "top": "ip2",
+            "param": [
+                {
+                    "lr_mult": 1
+                },
+                {
+                    "lr_mult": 2
+                }
+            ],
+            "inner_product_param": {
+                "num_output": 10
+            }
+        }
+    ]
+};
+
+    // Test data as demo
+var data2 = {
+	"name": "LeNet",
+	"layer": [{
+		"idx": 0,
+		"name": "mnist",
+		"type": "Data",
+		"top": ["data", "label"],
+		"include": {
+			"phase": "TRAIN"
+		},
+		"transform_param": {
+			"scale": 0.00390625
+		},
+		"data_param": {
+			"source": "examples/mlp/mnist_train_lmdb",
+			"batch_size": 64,
+			"backend": "LMDB"
+		}
+	}, {
+		"idx": 0,
+		"name": "mnist",
+		"type": "Data",
+		"top": ["data", "label"],
+		"include": {
+			"phase": "TEST"
+		},
+		"transform_param": {
+			"scale": 0.00390625
+		},
+		"data_param": {
+			"source": "examples/mlp/mnist_test_lmdb",
+			"batch_size": 100,
+			"backend": "LMDB"
+		}
+	}, {
+		"idx": 1,
+		"name": "ip1",
+		"type": "InnerProduct",
+		"bottom": "data",
+		"top": "ip1",
+		"param": [{
+			"lr_mult": 1
+		}, {
+			"lr_mult": 2
+		}],
+		"inner_product_param": {
+			"num_output": 15,
+			"weight_filler": {
+				"type": "xavier"
+			},
+			"bias_filler": {
+				"type": "constant"
+			}
+		}
+	}, {
+		"idx": 2,
+		"name": "relu1",
+		"type": "ReLU",
+		"bottom": "ip1",
+		"top": "ip1"
+	}, {
+		"idx": 3,
+		"name": "ip2",
+		"type": "InnerProduct",
+		"bottom": "ip1",
+		"top": "ip2",
+		"param": [{
+			"lr_mult": 1
+		}, {
+			"lr_mult": 2
+		}],
+		"inner_product_param": {
+			"num_output": 10,
+			"weight_filler": {
+				"type": "xavier"
+			},
+			"bias_filler": {
+				"type": "constant"
+			}
+		}
+	}, {
+		"idx": 4,
+		"name": "accuracy",
+		"type": "Accuracy",
+		"bottom": ["ip2", "label"],
+		"top": "accuracy",
+		"include": {
+			"phase": "TEST"
+		}
+	}, {
+		"idx": 5,
+		"name": "loss",
+		"type": "SoftmaxWithLoss",
+		"bottom": ["ip2", "label"],
+		"top": "loss"
+	}]
+};
+
+function Node(position, size){
+    this.position = position;
+    this.size = size;
+    this.getPosition = function(){
+        return this.position;
+    };
+    this.getSize = function(){
+        return this.size;
+    };
+}
+
+
+function Edge(startposition, endposition, stroke, r1, r2){
+     this.startposition= startposition;
+     this.endposition= endposition;
+     this.stroke = stroke;
+     this.r1 = r1;
+     this.r2 = r2;
+     this.getStart = function(){
+        return this.startposition;
+     };
+     this.getEnd = function(){
+        return this.endposition;
+     };
+     this.getr1 = function(){
+        return this.r1;
+     };
+     this.getr2 = function(){
+        return this.r2;
+     };
+}
+
+function Position (x, y){
+    this.x = x;
+    this.y = y;
+}
+
+// return the height of the layer, set each node position as calculated
+function setNodesPosition (nodes_arr, upperleft, width, simpleLayer) {
+  var x = upperleft.x + width / 2;
+  var temp = upperleft.y;
+	
+  if(simpleLayer) {
+  	for(var i = 0; i < 2; i++) {
+		var y = temp + width / 2;
+		var p = new Position(x, y);
+		nodes_arr[i].position = p;
+
+		temp = temp + width;
+	}
+	  
+	  temp = temp + width / 2 * 5;
+	  
+	for(var i = 2; i < 4; i++) {
+		var y = temp + width / 2;
+		var p = new Position(x, y);
+		nodes_arr[i].position = p;
+
+		temp = temp + width;
+	}
+  } else {
+  	for (var i = 0, len = nodes_arr.length; i < len; ++i) {
+		var y = temp + width / 2;
+		var p = new Position(x, y);
+		nodes_arr[i].position = p;
+
+		temp = temp + width;
+  	}
+  }
+  
+  return temp + width / 2 - upperleft.y; // return the overall height
+}
+
+
+function Layer (name, nodes, node_num, simpleLayer, width, position, prev, next) {
+  this.name = name;
+  this.nodes = nodes;
+  this.node_num = node_num;
+  this.width = width;
+  this.height = setNodesPosition(this.nodes, position, width, simpleLayer);
+  this.position = position;
+  this.prev = prev;
+  this.next = next;
+
+  this.getLayerInfo = function() {
+    return 'Layer ' + this.name + ' has node ' + this.nodes + ' with ' + this.width + ' , ' + ' height ' + ' origin ' + position + ' , prev layer ' + this.prev.name + ' , next layer ' + this.next.name;
+  };
+}
+
+function drawNode(node1){
+    P1 = node1.getPosition();
+    var x1 = P1.x;
+    var y1 = node1.position.y;
+
+    radius1 = node1.size;
+
+    var c = document.getElementById("myCanvas");
+    var ctx = c.getContext("2d");
+    ctx.beginPath();
+    ctx.arc(x1,y1,radius1,0,2*Math.PI);
+    ctx.stroke();
+}
+
+function drawEdge(Edge){
+    x1 = Edge.startposition.x;
+    y1 = Edge.startposition.y;
+    x2 = Edge.endposition.x;
+    y2 = Edge.endposition.y;
+    radius1 = Edge.r1;
+    radius2 = Edge.r2;
+    var c = document.getElementById("myCanvas");
+    var ctx = c.getContext("2d");
+    var distance1 = Math.sqrt(radius1 * radius1 / 2);
+    var distance2 = Math.sqrt(radius2 * radius2 / 2);
+    if (x1<x2){
+        x11 = x1+radius1;
+        y11 = y1;
+        x22 = x2-radius2;
+        y22 = y2;
+    }
+    else{
+        x11 = x1-radius1;
+        y11 = y1;
+        x22 = x2+radius2;
+        y22 = y2;
+    }
+
+    ctx.moveTo(x11,y11);
+    ctx.lineTo(x22,y22);
+    ctx.stroke();
+}
+
+function drawLayer(layer){
+    var name = layer.name;
+    var height = layer.height;
+    var width = layer.width;
+    var position = layer.position;
+    var x = position.x;
+    var y = position.y;
+    var c = document.getElementById("myCanvas");
+    var ctx = c.getContext("2d");
+    ctx.rect(x, y, width, height);
+    ctx.stroke();
+}
+
+function drawNodesInLayer(layer) {
+  var nodes = layer.nodes;
+  for (var i = 0; i < nodes.length; i++) {
+    drawNode(nodes[i]);
+  }
+}
+	
+	
+function drawDots(layer, nodes_num) { 
+  var c = document.getElementById("myCanvas");
+  var ctx = c.getContext("2d");
+  var distance = layer.width / 2; 	
+  nodes = layer.nodes;
+  var position = nodes[1].position; 
+  var dot_x = position.x; 
+  var dot_y = position.y; 
+
+  for (var i = 0; i < 6; i++) { 
+    dot_y = dot_y + distance; 
+    ctx.fillRect(dot_x, dot_y,3,3); 
+  } 
+  
+  ctx.font="20px Georgia";
+  ctx.fillText(nodes_num,dot_x - distance/2, nodes[3].position.y + distance*3);
+}
+
+function connectNodesInLayer(layer1, layer2) {
+  var nodes1 = layer1.nodes;
+  var nodes2 = layer2.nodes;
+
+  for (var i = 0; i < nodes1.length; i++) {
+    for (var j = 0; j < nodes2.length; j++) {
+      var e = new Edge(nodes1[i].position, nodes2[j].position, 1, nodes1[i].size, nodes2[j].size);
+      drawEdge(e);
+    }
+  }
+}
+
+
+function render(data) {
+    var c = document.getElementById("myCanvas");
+    var ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, ctx.width, ctx.height
+    );
+
+    layers = data.layer;
+
+    var layers_arr = [];
+    var input_pos = new Position(100, 20);
+    var input_node = new Node(input_pos, 50);
+    var nodes_input = [];
+    nodes_input.push(input_node);
+    var input_layer_pos = new Position(100, 100);
+    var input_layer = new Layer("input_layer", nodes_input, 1, false, 100, input_layer_pos, null, null);
+
+    layers_arr.push(input_layer);
+    drawNodesInLayer(input_layer);
+    prev_layer = input_layer
+    x_base = 250;
+    for (var i = 0; i < layers.length; i++) {
+      layer = layers[i];
+      if (layer['type'] == 'InnerProduct') {
+
+        var nodes_l = [];
+        var def_pos = new Position(0, 0); // placeholder for position
+        node_num = layer['inner_product_param']['num_output'];
+
+        var simpleLayer = false;
+        if(node_num <= 10) {
+          for (var j = 0; j < node_num; j++) {
+          var def_node = new Node(def_pos, 10);
+          nodes_l.push(def_node);
+          }
+        } else {
+          simpleLayer = true;
+          for (var j = 0; j < 4; j++) {
+            var def_node = new Node(def_pos, 10);
+            nodes_l.push(def_node);
+          }
+        }
+        
+        var layerpos = new Position(x_base, 20);
+        x_base = x_base + 200;
+
+        var l = new Layer("layer" + i.toString(), nodes_l, node_num, simpleLayer, 40, layerpos, null, null);
+        drawLayer(l);
+        drawNodesInLayer(l);
+		  
+        if(simpleLayer == true) {
+          drawDots(l, node_num);
+        }
+        connectNodesInLayer(prev_layer, l);
+        prev_layer = l;
+
+        layers_arr.push(l);
+      }
+    }
+    // tagging last layer
+    last_layer_nodes = layers_arr[layers_arr.length - 1].nodes;
+
+
+    ctx.font = "20px Georgia";
+
+    for (var i = 0; i < last_layer_nodes.length; i++) {
+      var pos = last_layer_nodes[i].position;
+      ctx.fillText("Output " + i.toString(), pos.x + 50, pos.y + 5);
+    }
+}
+
+function getUpdates() {
+
+
+        $.getJSON('/webui/net-description', function(json) {
+            render(json);
+            // render(data);
+        });
+    }
+
+    $(document).ready(function () {
+        window.setInterval(getUpdates, 5000);
+    });
+
+</script>
+</body>
+</html>

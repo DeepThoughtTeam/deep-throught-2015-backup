@@ -1,0 +1,34 @@
+<!DOCTYPE html> 
+<html> 
+<head> 
+	<title>Deepthought Demo</title>
+</head> 
+<body>
+    Deepthought Demo
+
+	    <form action="/webui/upload_file/" method="post" enctype="multipart/form-data">
+	        {% csrf_token %}
+		    <label for="file">Filename:</label>
+            <input type="file" name="file" id="file" >
+            <input type="submit" name="submit" value="Upload">
+            <a href="/webui/display-net/">Show net!</a>
+        </form>
+
+
+
+    <form action="/webui/upload_file/" method="post" enctype="multipart/form-data">
+	    {% csrf_token %}
+		<label for="file">Filename:</label>
+        <input type="file" name="file" id="file" >
+        <input type="submit" name="submit" value="Train">
+        <a href="/webui/show-train-result/">View result</a>
+    </form>
+
+
+    <button type="button">Test</button>
+
+    <a href="/webui/show-test-result/">View result</a> <br>
+
+
+</body>
+</html> 

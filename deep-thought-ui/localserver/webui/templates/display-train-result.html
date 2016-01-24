@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Display the feedback from the caffe service</title>
+
+</head>
+<body>
+    <ul></ul>
+
+</body>
+
+<script src="/static/js/jquery-1.11.3.js" type="text/javascript"></script>
+<script>
+    function sortJsonName(a, b) {
+        return a.name.toLowerCase() > b.name.toLowerCase() ? 1 : -1;
+    }
+
+    function getUpdates() {
+        var list = $("ul");
+        list.empty();
+        $.getJSON('/webui/caffe-train-result', function(json) {
+            var batchList = [];
+
+            console.log(json);
+
+            for (var name in json) {
+                batchList.push({name: name, value: json[name]})
+            }
+            batchList = $(batchList).sort(sortJsonName);
+
+            $(batchList).each(function(index){
+               list.append("<li>" + batchList[index].name + " Result:" + batchList[index].value + "</li>");
+            });
+            // $(json).each(function() {
+            //    list.prepend(JSON.stringify(this));
+            // });
+        });
+    }
+
+    $(document).ready(function () {
+        window.setInterval(getUpdates, 3000);
+    });
+</script>
+</html>
